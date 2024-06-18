@@ -42,8 +42,7 @@ class Despachante(Escalonador):  # Curto Prazo
                     processo = fila.get()  # Pega o primeiro processo da fila
                     cpu.adicionar_processo(processo)
                     processo.pcb.estado = 'Executando'
-                    print(f'Processo de id: {processo.pcb.id} movido de Pronto para {
-                          processo.pcb.estado}\n')
+                    print(f'Processo de id: {processo.pcb.id} movido de Pronto para {processo.pcb.estado}\n')
                     break
 
         if (cpu.processo):
@@ -60,7 +59,8 @@ class Despachante(Escalonador):  # Curto Prazo
 
             if (estado == 'TerminouFase1'):
                 cpu.processo.pcb.prioridade = 1
-                ram.bloqueia_processo(cpu.processo, ram, secundaria)
+                id = cpu.processo.disco
+                ram.bloqueia_processo(cpu.processo, ram, secundaria[id])
                 cpu.limpa_cpu()
 
             if (estado == 'TerminouFase2'):
@@ -68,8 +68,7 @@ class Despachante(Escalonador):  # Curto Prazo
                 cpu.limpa_cpu()
 
             if (estado == "Executando"):  # Continua exec
-                print(f'Processo {cpu.processo.pcb.id} ainda executando. Etapa: {
-                      cpu.processo.etapa}')
+                print(f'{cpu.id} - Processo {cpu.processo.pcb.id} ainda executando. Etapa: {cpu.processo.etapa}')
 
 class MedioPrazo(Escalonador):  # Médio Prazo
     def __init__(self, id):
@@ -89,12 +88,11 @@ class MedioPrazo(Escalonador):  # Médio Prazo
             secundaria.adicionar_processo_bloqueado_suspenso(processo)
             processo.pcb.estado = 'Bloqueado-Suspenso'
             ram.bloqueados.remove(processo)
-            print(f'Processo {
-                  processo.pcb.id} Bloqueado --> Bloqueado-Suspenso\n')
+            print(f'Processo {processo.pcb.id} Bloqueado --> Bloqueado-Suspenso\n')
             processo.pcb.prioridade = 1
 
     # Memória Secundaria --> Memória RAM
-    def swap_in(self, processo, ram, secundaria) -> bool:
+    def swap_in(self, processo, ram, secundaria):
         flag = True  # Essa flag é de controle para o sucesso, pq pode ter limite na Memória, assim ele continua no
         if (processo.pcb.estado == "Pronto-Suspenso"):
             processo.pcb.estado = "Pronto"
@@ -154,8 +152,7 @@ class MemoriaRam:
             print(f'Fila de Prontos {index + 1}')
             temp_list = list(fila.queue)
             for processo in temp_list:
-                print(f'ID: {processo.pcb.id}, Prioridade: {
-                      processo.pcb.prioridade}, Estado: {processo.pcb.estado}')
+                print(f'ID: {processo.pcb.id}, Prioridade: {processo.pcb.prioridade}, Estado: {processo.pcb.estado}')
         print('-----------------------------------------------')
         print()
         return True
@@ -165,8 +162,7 @@ class MemoriaRam:
             self.bloqueados.append(processo)
             processo.pcb.estado = "Bloqueado"
             self.memoria.remove(processo)
-            print(f'Processo de id: {processo.pcb.id} movido de Executando para {
-                  processo.pcb.estado}\n')
+            print(f'Processo de id: {processo.pcb.id} movido de Executando para {processo.pcb.estado}\n')
             print('Fila de Bloqueado:', self.bloqueados)
         else:
             self.escalona.swap_out(processo, ram, secundaria)
@@ -231,6 +227,9 @@ class CPU:
     def executar_processo(self):
         self.executando = True
 
+        if self.processo is None:
+            return ''
+
         if (self.processo.etapa == self.processo.f1):
             return 'TerminouFase1'
 
@@ -260,10 +259,10 @@ class Computador:
         '4': secundaria4
     }
     # Inicialização dos processadores
-    cpu1 = CPU('cpu1')
-    cpu2 = CPU('cpu2')
-    cpu3 = CPU('cpu3')
-    cpu4 = CPU('cpu4')
+    cpu1 = CPU('CPU 1')
+    cpu2 = CPU('CPU 2')
+    cpu3 = CPU('CPU 3')
+    cpu4 = CPU('CPU 4')
 
     processos = deque()
     cont_n_arqs = 0
@@ -277,8 +276,7 @@ class Computador:
             id = processoLinha[5]
 
             processo.pcb.estado = "Pronto-Suspenso"
-            print(f'Processo de id: {processo.pcb.id} movido de Novo para {
-                  processo.pcb.estado}\n')
+            print(f'Processo de id: {processo.pcb.id} movido de Novo para {processo.pcb.estado}\n')
             processos.append(processo)
             secundaria[id].adicionar_processo_pronto_suspenso(processo)
             cont_n_arqs += 1
@@ -307,7 +305,10 @@ class Computador:
                 if not sucesso:
                     # Se o swap_in falhar, coloca o processo de volta ao final da fila
                     processos.append(processo)
-        despachante.Despacho(ram, cpu1, secundaria[processo.disco])
+        despachante.Despacho(ram, cpu1, secundaria)
+        despachante.Despacho(ram, cpu2, secundaria)
+        despachante.Despacho(ram, cpu3, secundaria)
+        despachante.Despacho(ram, cpu4, secundaria)
         ram.processa_bloqueados()
 
 if __name__ == '__main__':
